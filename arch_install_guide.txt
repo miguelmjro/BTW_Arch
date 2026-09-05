@@ -1,0 +1,391 @@
+================================================================================
+                    GUÍA DE INSTALACIÓN Y REGISTRO: ARCH LINUX
+================================================================================
+Proyecto: BTW_Arch
+Bitácora de comandos para una instalación limpia, reproducible y configurable.
+
+--------------------------------------------------------------------------------
+FASE 0: PREPARACIÓN EN EL LIVE USB (ENTORNO DE INSTALACIÓN)
+--------------------------------------------------------------------------------
+
+[0.1] CONFIGURAR LA DISPOSICIÓN DEL TECLADO
+--------------------------------------------------
+# Para teclado latinoamericano:
+loadkeys la-latin1
+
+[0.2] VERIFICAR MODO DE ARRANQUE (UEFI vs BIOS)
+--------------------------------------------------
+Para comprobar si el sistema arrancó en modo UEFI:
+
+ls /sys/firmware/efi/efivars
+
+# NOTA:
+# - Si la carpeta existe y muestra variables, estás en modo UEFI (Recomendado).
+# - Si dice "No such file or directory", el arranque es BIOS heredado (Legacy/CSM).
+
+
+[0.3] CONEXIÓN A INTERNET
+--------------------------------------------------
+Arch Linux necesita conexión activa para descargar paquetes actualizados.
+
+A) Si usas cable Ethernet:
+   Generalmente se conecta de forma automática mediante DHCP.
+
+B) Si usas Wi-Fi (herramienta interactiva 'iwctl'):
+   1. Iniciar la utilidad interactiva de iwd:
+      iwctl
+
+   2. (Dentro del prompt [iwd]#) Ver el nombre de tu tarjeta inalámbrica (ej. wlan0):
+      device list
+
+   3. Escanear redes disponibles:
+      station wlan0 scan
+
+   4. Listar las redes detectadas:
+      station wlan0 get-networks
+
+   5. Conectarte a tu red Wi-Fi (te pedirá la contraseña):
+      station wlan0 connect "NOMBRE_DE_TU_WIFI"
+
+   6. Salir de iwctl:
+      exit
+
+C) Comprobar la conexión:
+   ping -c 3 archlinux.org
+
+
+[0.4] SINCRONIZAR LA HORA DEL SISTEMA (NTP)
+--------------------------------------------------
+Garantiza que la hora del sistema sea precisa para evitar problemas con
+certificados SSL y firmas de paquetes:
+
+timedatectl set-ntp true
+
+# Verificar el estado del servicio horario:
+timedatectl status
+
+
+[0.5] ACTUALIZAR MIRRORS / PACMAN KEYRING (OPCIONAL PERO RECOMENDADO)
+--------------------------------------------------
+Si la imagen ISO tiene algunas semanas/meses, es recomendable refrescar las llaves:
+
+pacman -Sy archlinux-keyring --noconfirm
+
+================================================================================
+FASE 1: PARTICIONADO, FORMATEO Y MONTAJE DE DISCOS
+================================================================================
+
+[1.1] IDENTIFICAR EL DISCO
+--------------------------------------------------
+Identifica el nombre de tu disco duro o SSD donde se instalará el sistema:
+
+lsblk
+
+# NOTA:
+# - Discos SATA / HDD / SSD: suelen llamarse /dev/sda, /dev/sdb, etc.
+# - Discos NVMe: suelen llamarse /dev/nvme0n1, /dev/nvme1n1, etc.
+#
+# (Asegúrate de NO confundir tu disco con la memoria USB del Live).
+
+
+[1.2] CREAR LA TABLA DE PARTICIONES (GPT)
+--------------------------------------------------
+Usamos 'cfdisk' que ofrece una interfaz visual sencilla en la terminal:
+
+# Si tu disco es SATA/SSD:
+cfdisk /dev/sda
+
+# Si tu disco es NVMe:
+cfdisk /dev/nvme0n1
+
+ESQUEMA RECOMENDADO (Seleccionar 'gpt' si el disco es nuevo o no tiene tabla):
+-------------------------------------------------------------------------------
+| Partición | Tamaño sugerido | Tipo en cfdisk        | Uso                   |
+|-----------|-----------------|-----------------------|-----------------------|
+| /dev/sda1 | 1G (o 512M)     | EFI System            | Arranque UEFI         |
+| /dev/sda2 | 4G a 8G         | Linux swap            | Memoria Swap          |
+| /dev/sda3 | Resto del disco | Linux root (x86-64)   | Sistema Raíz (/)      |
+-------------------------------------------------------------------------------
+* Al terminar en cfdisk: Selecciona [Write], escribe 'yes' para confirmar y [Quit].
+
+
+[1.3] FORMATEAR LAS PARTICIONES
+--------------------------------------------------
+(Ajusta los nombres según tu disco: sda1/sda2/sda3 o nvme0n1p1/p2/p3)
+
+1. Formatear la partición EFI en FAT32:
+   mkfs.fat -F 32 /dev/sda1
+
+2. Formatear la partición Swap y activarla:
+   mkswap /dev/sda2
+   swapon /dev/sda2
+
+3. Formatear la partición Raíz (ext4):
+   mkfs.ext4 /dev/sda3
+
+
+[1.4] MONTAR LAS PARTICIONES
+--------------------------------------------------
+Montamos la raíz en /mnt y la partición EFI dentro de /mnt/boot:
+
+1. Montar partición raíz:
+   mount /dev/sda3 /mnt
+
+2. Montar partición de arranque EFI:
+   mount --mkdir /dev/sda1 /mnt/boot
+
+3. Verificar que todo esté montado correctamente:
+   lsblk
+
+================================================================================
+FASE 2: INSTALACIÓN DEL SISTEMA BASE (PACSTRAP Y FSTAB)
+================================================================================
+
+[2.1] INSTALAR PAQUETES BASE CON PACSTRAP
+--------------------------------------------------
+Instalamos el sistema operativo mínimo, el kernel, herramientas de compilación
+y utilidades de red en la raíz montada (/mnt).
+
+# Selecciona el microcódigo según tu procesador:
+# - Procesadores Intel: intel-ucode
+# - Procesadores AMD:   amd-ucode
+
+pacstrap -K /mnt base base-devel linux linux-firmware intel-ucode networkmanager nano neovim git dosfstools e2fsprogs
+
+# DESCRIPCIÓN DE PAQUETES CLAVE:
+# - base: Paquetes esenciales del sistema.
+# - base-devel: Herramientas para compilar software (necesario para AUR / yay).
+# - linux: El kernel estándar de Linux.
+# - linux-firmware: Controladores para tarjetas Wi-Fi, GPUs y componentes.
+# - intel-ucode / amd-ucode: Actualizaciones de seguridad y estabilidad del CPU.
+# - networkmanager: Gestor de conexiones de red (cable, Wi-Fi, DNS).
+# - nano / neovim: Editores de texto para configurar archivos.
+# - git: Para clonar repositorios y herramientas.
+# - dosfstools / e2fsprogs: Soporte para sistemas de archivos FAT y EXT4.
+
+
+[2.2] GENERAR EL ARCHIVO FSTAB
+--------------------------------------------------
+El archivo /etc/fstab le indica al sistema cómo y dónde montar las particiones
+automáticamente durante el arranque usando sus UUIDs:
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+# VERIFICAR QUE SE HAYA GENERADO CORRECTAMENTE:
+cat /mnt/etc/fstab
+
+# (Deberías ver listadas tus particiones /, /boot y swap con sus respectivos UUIDs).
+
+================================================================================
+FASE 3: CONFIGURACIÓN DENTRO DEL NUEVO SISTEMA (CHROOT)
+================================================================================
+
+[3.1] ENTRAR AL ENTORNO CHROOT
+--------------------------------------------------
+Ingresamos como root a nuestro nuevo sistema instalado:
+
+arch-chroot /mnt
+
+
+[3.2] CONFIGURAR ZONA HORARIA Y RELOJ DE HARDWARE
+--------------------------------------------------
+1. Vincular la zona horaria adecuada (ejemplo: America/Bogota, America/Mexico_City, America/Santiago):
+   ln -sf /usr/share/zoneinfo/America/Bogota /etc/localtime
+
+   # (Para ver todas las zonas disponibles: ls /usr/share/zoneinfo/America/)
+
+2. Sincronizar el reloj del hardware con el sistema:
+   hwclock --systohc
+
+
+[3.3] LOCALIZACIÓN E IDIOMA
+--------------------------------------------------
+1. Editar /etc/locale.gen para habilitar tu idioma:
+   nano /etc/locale.gen
+
+   # Descomenta (borra el '#' inicial) las siguientes líneas:
+   # es_CO.UTF-8 UTF-8   (o tu país: es_MX, es_AR, es_CL, es_ES, etc.)
+   # en_US.UTF-8 UTF-8   (recomendado mantenerlo también)
+
+2. Generar las configuraciones regionales:
+   locale-gen
+
+3. Configurar la variable de idioma del sistema:
+   echo "LANG=es_CO.UTF-8" > /etc/locale.conf
+
+4. Establecer el mapa de teclado de la consola permanente:
+   echo "KEYMAP=la-latin1" > /etc/vconsole.conf
+
+
+[3.4] RED Y NOMBRE DEL EQUIPO (HOSTNAME)
+--------------------------------------------------
+1. Definir el nombre de tu máquina (ej. archlinux):
+   echo "archlinux" > /etc/hostname
+
+2. Configurar el archivo /etc/hosts:
+   nano /etc/hosts
+
+   # Agregar el siguiente contenido:
+   127.0.0.1   localhost
+   ::1         localhost
+   127.0.1.1   archlinux.localdomain archlinux
+
+3. Habilitar el servicio NetworkManager para que inicie automáticamente:
+   systemctl enable NetworkManager
+
+
+[3.5] CONTRASEÑA ROOT Y CREACIÓN DE USUARIO NORMAL
+--------------------------------------------------
+1. Asignar contraseña al superusuario root:
+   passwd
+
+2. Crear tu usuario personal con grupo 'wheel' (para permisos sudo) y shell bash:
+   useradd -m -G wheel -s /bin/bash tu_usuario
+
+3. Asignar contraseña a tu nuevo usuario:
+   passwd tu_usuario
+
+4. Dar permisos de 'sudo' al grupo wheel:
+   EDITOR=nano visudo
+
+   # Busca y descomenta la línea (elimina el '#'):
+   # %wheel ALL=(ALL:ALL) ALL
+   # (Guarda con Ctrl+O, Enter, y sal con Ctrl+X).
+
+
+[3.6] INSTALACIÓN DEL CARGADOR DE ARRANQUE (GRUB UEFI)
+--------------------------------------------------
+1. Instalar los paquetes de GRUB y EFI:
+   pacman -S grub efibootmgr os-prober
+
+2. Instalar GRUB en la partición EFI (/boot):
+   grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+
+3. Generar el archivo de configuración de GRUB:
+   grub-mkconfig -o /boot/grub/grub.cfg
+
+   # NOTA DUAL BOOT (Si tienes Windows u otro SO):
+   # Si usas os-prober, descomenta 'GRUB_DISABLE_OS_PROBER=false' en /etc/default/grub
+   # y vuelve a ejecutar: grub-mkconfig -o /boot/grub/grub.cfg
+
+
+[3.7] SALIR DE CHROOT Y REINICIAR
+--------------------------------------------------
+1. Salir del entorno chroot:
+   exit
+
+2. Desmontar todas las particiones de forma segura:
+   umount -R /mnt
+
+3. Reiniciar el equipo (retira la memoria USB tras apagar/reiniciar):
+   reboot
+
+
+================================================================================
+FASE 4: PRIMER ARRANQUE Y POST-INSTALACIÓN BÁSICA
+================================================================================
+(Inicia sesión con tu nuevo usuario y tu contraseña).
+
+[4.1] PROBAR PRIVILEGIOS SUDO Y CONEXIÓN
+--------------------------------------------------
+# Probar conexión a internet:
+ping -c 3 archlinux.org
+
+# Si usas Wi-Fi y necesitas conectarte en el sistema instalado:
+nmtui
+# (O usa: nmcli device wifi connect "NOMBRE_WIFI" password "CONTRASEÑA")
+
+
+[4.2] CONTROLADORES DE VIDEO (GPU)
+--------------------------------------------------
+Instala el driver correspondiente a tu tarjeta gráfica:
+
+# Para Intel Graphics (Integrada):
+sudo pacman -S mesa vulkan-intel lib32-mesa
+
+# Para AMD Radeon (Integrada o Dedicada):
+sudo pacman -S mesa vulkan-radeon lib32-mesa xf86-video-amdgpu
+
+# Para NVIDIA (GPUs modernas Turing/Ampere/Ada Lovelace / RTX / GTX 16xx):
+sudo pacman -S nvidia nvidia-utils nvidia-settings lib32-nvidia-utils
+
+
+[4.3] SERVIDOR DE AUDIO (PIPEWIRE)
+--------------------------------------------------
+Pipewire es el estándar moderno de audio de baja latencia en Linux:
+
+sudo pacman -S pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber pavucontrol
+
+
+[4.4] BLUETOOTH (OPCIONAL)
+--------------------------------------------------
+sudo pacman -S bluez bluez-utils
+sudo systemctl enable --now bluetooth
+
+
+================================================================================
+FASE 5: AUR HELPER, ENTORNO DE ESCRITORIO Y PERSONALIZACIÓN
+================================================================================
+
+[5.1] INSTALAR UN AUR HELPER (YAY)
+--------------------------------------------------
+El repositorio AUR te da acceso a miles de paquetes adicionales:
+
+cd /tmp
+git clone https://aur.archlinux.org/yay.git
+cd yay
+makepkg -si --noconfirm
+cd ~
+
+
+[5.2] INSTALACIÓN DEL ENTORNO GRÁFICO (ELIGE UNA OPCIÓN)
+--------------------------------------------------
+
+--- OPCIÓN A: KDE PLASMA (Moderno, altamente personalizable y completo) ---
+sudo pacman -S plasma kde-applications sddm
+sudo systemctl enable sddm
+
+--- OPCIÓN B: GNOME (Limpio, moderno y minimalista) ---
+sudo pacman -S gnome gnome-extra gdm
+sudo systemctl enable gdm
+
+--- OPCIÓN C: HYPRLAND (Tiling Wayland Compositor - Extremadamente fluido) ---
+sudo pacman -S hyprland waybar wofi kitty dolphin polkit-kde-agent dunst grim slurp
+# Recomendado gestor de login ligero o sddm:
+sudo pacman -S sddm
+sudo systemctl enable sddm
+
+
+[5.3] FUENTES, CÓDECS Y UTILIDADES RECOMENDADAS
+--------------------------------------------------
+# Fuentes tipográficas completas con soporte Nerd Fonts e iconos:
+sudo pacman -S ttf-font-awesome ttf-jetbrains-mono-nerd noto-fonts noto-fonts-cjk noto-fonts-emoji
+
+# Códecs multimedia y descompresores:
+sudo pacman -S ffmpeg p7zip unrar unzip tar
+
+# Herramientas de terminal útiles:
+sudo pacman -S fastfetch btop ripgrep fd eza bat zsh
+
+
+[5.4] COMANDOS DE MANTENIMIENTO DEL SISTEMA
+--------------------------------------------------
+# Actualizar el sistema completo (repositorios oficiales + AUR con yay):
+yay -Syu
+
+# Limpiar caché de paquetes antiguos para liberar espacio en disco:
+sudo pacman -Sc
+yay -Sc
+
+# Buscar paquetes huérfanos (dependencias que ya no se usan):
+sudo pacman -Qtdq
+
+# Eliminar paquetes huérfanos:
+sudo pacman -Rns $(pacman -Qtdq)
+
+================================================================================
+¡INSTALACIÓN Y CONFIGURACIÓN COMPLETA DE ARCH LINUX FINALIZADA!
+================================================================================
+
+
+
