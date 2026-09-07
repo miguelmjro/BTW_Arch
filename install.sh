@@ -154,8 +154,8 @@ pacman -Sy archlinux-keyring --noconfirm
 # Paquetes base + microcódigo Intel + drivers gráficos Intel + herramientas
 pacstrap -K /mnt \
     base base-devel linux linux-firmware intel-ucode \
-    mesa vulkan-intel lib32-mesa \
-    networkmanager nano neovim git dosfstools e2fsprogs sudo
+    mesa vulkan-intel networkmanager \
+    nano neovim git dosfstools e2fsprogs sudo
 
 # 12. Generar archivo fstab
 echo -e "${VERDE}[+] Generando /etc/fstab...${RESET}"
