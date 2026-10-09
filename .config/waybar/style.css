@@ -1,0 +1,220 @@
+/*base background color*/
+@define-color bg_main rgba(26, 26, 46, 0.7);
+@define-color bg_modules rgb(33, 49, 92);
+@define-color bg_main_tooltip rgb(26, 26, 46);
+
+
+
+/*base background color of selections */
+@define-color bg_hover rgba(60, 59, 120, 1);
+/*base background color of active elements */
+@define-color bg_active rgba(100, 100, 100, 0.5);
+@define-color green rgba(25, 100, 25, 0.2);
+@define-color green_active rgba(10, 200, 10, 0.8);
+
+/*base border color*/
+@define-color border_main rgba(255, 255, 255, 0.2);
+
+/*text color for entries, views and content in general */
+@define-color content_main rgba(202, 202, 202, 1);
+@define-color content_inactive rgba(202, 202, 202, 0.25);
+@define-color content_active rgba(150, 170, 252, 0.9);
+@define-color content_hover rgb(108, 99, 255);
+
+window#waybar {
+  background: @bg_main;
+  color: @content_main;
+  border: none;
+  box-shadow: none;
+}
+
+#workspaces {
+  color: transparent;
+  background: @bg_modules;
+  margin-right: 1.5px;
+  margin-left: 1.5px;
+  border-radius: 7px;
+}
+
+#workspaces button {
+  padding: 3px;
+  color: @content_inactive;
+  margin-left: 1.5px;
+  box-shadow: none;
+  text-shadow: none;
+  border: none;
+  /*transition: all 0.25s cubic-bezier(0.165, 0.84, 0.44, 1);*/
+}
+
+#workspaces button.focused {
+  color: green;
+  background: rgb(108, 99, 255);
+  transition: none;
+}
+
+#workspaces button.active {
+  color: @content_active;
+  background: @bg_hover;
+  margin-left: 1.5px;
+}
+#workspaces button.active:hover {
+  color: @content_active;
+  background: @bg_hover;
+  margin-left: 1.5px;
+}
+
+#workspaces button:hover {
+  color: @content_hover;
+  background: @bg_hover;
+  border: none;
+  margin-left: 1.5px;
+  box-shadow: none;
+  /* Remove predefined box-shadow */
+  text-shadow: none;
+  transition: none;
+}
+
+tooltip {
+  background: @bg_main_tooltip;
+  /* El último número (0.0) es la opacidad */
+  /* Color del texto del tooltip */
+  border-radius: 7px;
+}
+tooltip label {
+    font-size: 12px;
+    color: @content_main;
+    
+}
+tooltip label#clock.date {
+    font-size: 20px;
+    color: @content_hover;
+    
+}
+
+#window {
+  background: @bg_modules;
+  min-width: 140px;
+  border-radius: 10px;
+  margin-left: 20px;
+  margin-right: 20px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+#window:hover {
+  color: @content_hover;
+  background: @bg_hover;
+}
+
+#network {
+  background: @bg_modules;
+  margin-left: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-radius: 7px;
+
+}
+
+#network:hover {
+  color: @content_hover;
+  background: @bg_hover;
+}
+
+#pulseaudio {
+  background: @bg_modules;
+  margin-left: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-radius: 7px;
+
+}
+
+#pulseaudio:hover {
+  color: @content_hover;
+  background: @bg_hover;
+}
+
+#hardware {
+  background: @bg_modules;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-radius: 7px;
+
+}
+
+#hardware:hover {
+  color: @content_hover;
+  background: @bg_hover;
+}
+
+#cpu {
+  margin-left: 2px;
+  padding-left: 10px;
+}
+
+#memory {
+  margin-left: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+#tempeature {
+  margin-left: 2px;
+  padding-left: 10px;
+}
+
+#clock.date {
+  background: @bg_modules;
+  margin-left: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-radius: 7px;
+
+}
+
+#clock.date:hover {
+  color: @content_hover;
+  background: @bg_hover;
+}
+
+#clock.time {
+  background: @bg_modules;
+  margin-left: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-radius: 7px;
+
+}
+
+#clock.time:hover {
+  color: @content_hover;
+  background: @bg_hover;
+}
+
+#custom_power {
+  background: @bg_modules;
+  margin-left: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-radius: 7px;
+
+}
+#custom_power:hover {
+  color: @content_hover;
+  background: @bg_hover;
+}
+
+#custom-exchange {
+  background: @bg_modules;
+  margin-left: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-radius: 7px;
+
+}

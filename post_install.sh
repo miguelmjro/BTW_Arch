@@ -28,16 +28,16 @@ echo -e "${AZUL}====================================================${RESET}\n"
 # 1. Servidor de audio PulseAudio y utilidades
 echo -e "${VERDE}[+] Instalando servidor de audio (PulseAudio) y utilidades básicas...${RESET}"
 # Si pipewire-pulse estuviese instalado, se remueve para evitar conflictos con pulseaudio
-sudo pacman -Rdd --noconfirm pipewire-pulse 2>/dev/null || true
 sudo pacman -S --needed --noconfirm \
-    pulseaudio pulseaudio-alsa pulseaudio-bluetooth pavucontrol \
+    pulseaudio pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber pavucontrol \
     bluez bluez-utils \
     fastfetch btop ripgrep fd eza bat \
-    ttf-font-awesome ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji \
-    ffmpeg p7zip unrar unzip
+    ttf-font-awesome ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji otf-font-awesome \
+    ffmpeg p7zip unrar unzip code firefox openssh
 
 # Habilitar Bluetooth
 sudo systemctl enable --now bluetooth || true
+sudo systemctl enable --now systemd-timesyncd
 
 # 2. Instalar AUR Helper (yay)
 if ! command -v yay &> /dev/null; then
@@ -71,7 +71,8 @@ case "$DE_CHOICE" in
         ;;
     3)
         echo -e "${VERDE}[+] Instalando Hyprland, Waybar y Kitty...${RESET}"
-        sudo pacman -S --needed --noconfirm hyprland waybar wofi kitty dolphin polkit-kde-agent dunst grim slurp sddm
+        sudo pacman -S --needed --noconfirm hyprland waybar hyprlauncher hyprpaper kitty dolphin polkit-kde-agent dunst grim slurp sddm \
+            fish gnome-calendar gimp python-openai-whisper wiremix ffmpeg telegram-desktop freecad blender qalculate-gtk vlc 
         sudo systemctl enable sddm
         ;;
     *)
